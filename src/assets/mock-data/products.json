@@ -1,0 +1,26 @@
+[
+  {
+    "id": "cafe1e28-0edf-4cb2-a97c-dc58145c7d61",
+    "name": "Laptop Pro",
+    "description": "A high-end laptop for professionals.",
+    "price": 2500
+  },
+  {
+    "id": "2c7d9b7b-1ebd-4b9b-9a29-b13faf2e6c33",
+    "name": "Smartphone Plus",
+    "description": "A large-screen smartphone with the best camera.",
+    "price": 999
+  },
+  {
+    "id": "c6af7a20-6f51-4486-a509-ea1a43c73a79",
+    "name": "E-Reader Light",
+    "description": "Lightweight e-reader for book lovers.",
+    "price": 150
+  },
+  {
+    "id": "437003c9-0731-4c39-a11d-55299c7b733a",
+    "name": "Wireless Earbuds",
+    "description": "High-quality sound and noise cancellation.",
+    "price": 200
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "302a8334-ce5d-4f8c-b74d-c82bfe8eebe4",
+    "name": "Alice Johnson",
+    "country": "USA",
+    "email": "alice@example.com",
+    "password": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f"
+  },
+  {
+    "id": "502ebdf0-8040-4751-965a-b4a2ee39c81d",
+    "name": "Bob Smith",
+    "country": "Canada",
+    "email": "bob@example.com",
+    "password": "52bc47f80b6fe698e9a14327e1bb7ddfa39a21740c8c7017329f3ec555a3bcf6"
+  }
+]

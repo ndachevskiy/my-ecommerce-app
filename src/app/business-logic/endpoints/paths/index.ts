@@ -1,0 +1,6 @@
+export * from "./product/productPaths"
+export * from "./customers/customerPaths"
+export * from "./orders/orderPaths"
+export * from "./items/itemPaths"
+export * from "./auth/authPaths"
+export * from "./operations/operationsPaths"

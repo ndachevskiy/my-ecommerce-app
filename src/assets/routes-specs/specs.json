@@ -1,0 +1,1490 @@
+{
+    "swagger": "2.0",
+    "info": {
+      "description": "This is a sample server for an e-commerce system.",
+      "version": "1.0.0",
+      "title": "E-commerce API"
+    },
+    "host": "localhost:3000",
+    "basePath": "/api/v1",
+    "tags": [
+      {
+        "name": "Products",
+        "description": "Operations related to products including create, read, update, and delete products."
+      },
+      {
+        "name": "Orders",
+        "description": "Endpoints for order management, from placement through to querying and managing order status."
+      },
+      {
+        "name": "Customers",
+        "description": "Customer management operations such as customer registration, data retrieval, and customer profile updates."
+      },
+      {
+        "name": "Items",
+        "description": "Handles all item-specific actions within orders, including item addition, removal, and modification within the order context."
+      },
+      {
+        "name": "Auth",
+        "description": "Authentication and authorization services, including login operations, token management, and security controls."
+      },
+      {
+        "name": "Operations",
+        "description": "Special administrative operations such as system health checks, configuration settings, and backend system operations."
+      }
+    ],    
+    "paths": {
+      "/operations/ping": {
+        "get": {
+          "tags": ["Operations"],
+          "summary": "Check API Health",
+          "description": "A simple ping route to verify if the API is operational.",
+          "produces": ["application/json"],
+          "responses": {
+            "200": {
+              "description": "API is up and running",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "response": {
+                        "type": "string",
+                        "example": "pong"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "schema": {
+                "$ref": "#/definitions/InternalServerError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "InternalServerError",
+                  "message": "An unexpected error occurred during processing."
+                }
+              }
+            }
+          }
+        }
+      },      
+      "/operations/login": {
+        "post": {
+          "tags": ["Auth"],
+          "summary": "Authenticate user and retrieve token",
+          "description": "This endpoint authenticates user credentials and returns a JWT token for accessing protected routes.",
+          "produces": ["application/json"],
+          "parameters": [
+            {
+              "in": "body",
+              "name": "credentials",
+              "description": "User login credentials",
+              "required": true,
+              "schema": {
+                "$ref": "#/definitions/LoginRequest"
+              }
+            },
+            {
+              "name": "Service",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Name of the service making the API call."
+            },
+            {
+              "name": "Transaction-ID",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Unique identifier for the transaction."
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "required": true,
+              "default": "application/json",
+              "type": "string",
+              "description": "Content type of the request, must be application/json."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Authentication successful",
+              "schema": {
+                "$ref": "#/definitions/LoginResponse"
+              }
+            },
+            "400": {
+              "description": "Bad Request Error",
+              "schema": {
+                "$ref": "#/definitions/BadRequestError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "BadRequestError",
+                  "message": "Request body missing or incomplete. Required fields: email, password."
+                }
+              }
+            },
+            "401": {
+              "description": "Unauthorized Error",
+              "schema": {
+                "$ref": "#/definitions/UnauthorizedError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "UnauthorizedError",
+                  "message": "Invalid credentials provided or JWT token is missing."
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "schema": {
+                "$ref": "#/definitions/InternalServerError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "InternalServerError",
+                  "message": "An unexpected error occurred during processing."
+                }
+              }
+            }
+          }                  
+        }
+      },
+      "/orders/{id}": {
+        "patch": {
+          "tags": ["Orders"],
+          "summary": "Update an existing order",
+          "description": "Updates an existing order by changing its status or modifying its items. You can update either the status or the items or both.",
+          "produces": ["application/json"],
+          "consumes": ["application/json"],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "description": "The UUID of the order to update.",
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[4][0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            },
+            {
+              "in": "body",
+              "name": "orderUpdate",
+              "description": "Order update data containing new status and/or list of new or updated items.",
+              "required": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["Pending", "Processed", "Rejected"],
+                    "description": "New status of the order."
+                  },
+                  "items": {
+                    "type": "array",
+                    "description": "List of new or updated items in the order.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "productId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Unique identifier for the product",
+                          "example": "cafe1e28-0edf-4cb2-a97c-dc58145c7d61"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "example": 1,
+                          "description": "Quantity of the product in the order"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Bearer token for authentication."
+            },
+            {
+              "name": "Service",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Name of the service making the API call."
+            },
+            {
+              "name": "Transaction-ID",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Unique identifier for the transaction."
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "required": true,
+              "default": "application/json",
+              "type": "string",
+              "description": "Content type of the request, must be application/json."
+            }
+          ],
+          "responses": {
+            "201": {
+              "description": "Order updated successfully",
+              "schema": {
+                "type": "object",
+                "required": ["data", "links"],
+                "properties": {
+                  "data": {
+                    "$ref": "#/definitions/OrderData"
+                  },
+                  "links": {
+                    "$ref": "#/definitions/LinksObject"
+                  }
+                }
+              }
+            }, 
+            "400": {
+              "description": "Invalid input, object invalid",
+              "schema": {
+                "$ref": "#/definitions/BadRequestError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "BadRequestError",
+                  "message": "Invalid product ID or quantity provided."
+                }
+              }
+            },
+            "401": {
+              "description": "Unauthorized",
+              "schema": {
+                "$ref": "#/definitions/UnauthorizedError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "UnauthorizedError",
+                  "message": "JWT token is missing or expired."
+                }
+              }
+            },
+            "403": {
+              "description": "Forbidden Error",
+              "schema": {
+                "$ref": "#/definitions/ForbiddenError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "ForbiddenError",
+                  "message": "You do not have permission to access this resource."
+                }
+              }
+            },
+            "404": {
+              "description": "Not Found Error",
+              "schema": {
+                "$ref": "#/definitions/NotFoundError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "NotFoundError",
+                  "message": "The product with ID cafe1e28-0edf-4cb2-a97c-dc58145c7d61 was not found."
+                }
+              }
+            },
+            "500": {
+              "description": "Server error",
+              "schema": {
+                "$ref": "#/definitions/InternalServerError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "InternalServerError",
+                  "message": "An unexpected error occurred while processing the request."
+                }
+              }
+            }
+          }
+        }
+      },
+      "/orders": {
+        "post": {
+          "tags": ["Orders"],
+          "summary": "Create a new order",
+          "description": "Creates a new order with specified products and quantities. Returns the created order details.",
+          "produces": ["application/json"],
+          "consumes": ["application/json"],
+          "parameters": [
+            {
+              "in": "body",
+              "name": "order",
+              "description": "Order data containing product IDs and their quantities",
+              "required": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "description": "List of products and quantities to order",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "productId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "cafe1e28-0edf-4cb2-a97c-dc58145c7d61",
+                          "description": "Unique identifier for the product"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "example": 2,
+                          "description": "Quantity of the product to order"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Bearer token for authentication."
+            },
+            {
+              "name": "Service",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Name of the service making the API call."
+            },
+            {
+              "name": "Transaction-ID",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Unique identifier for the transaction."
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "required": true,
+              "default": "application/json",
+              "type": "string",
+              "description": "Content type of the request, must be application/json."
+            }
+          ],
+          "responses": {
+            "201": {
+              "description": "Order created successfully",
+              "schema": {
+                "type": "object",
+                "required": ["data", "links"],
+                "properties": {
+                  "data": {
+                    "$ref": "#/definitions/OrderData"
+                  },
+                  "links": {
+                    "$ref": "#/definitions/LinksObject"
+                  }
+                }
+              }
+            },            
+            "400": {
+              "description": "Invalid input, object invalid",
+              "schema": {
+                "$ref": "#/definitions/BadRequestError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "BadRequestError",
+                  "message": "Items required but not provided, or invalid product IDs."
+                }
+              }
+            },
+            "401": {
+              "description": "Unauthorized",
+              "schema": {
+                "$ref": "#/definitions/UnauthorizedError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "UnauthorizedError",
+                  "message": "JWT token is missing or expired."
+                }
+              }
+            },
+            "403": {
+              "description": "Forbidden Error",
+              "schema": {
+                "$ref": "#/definitions/ForbiddenError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "ForbiddenError",
+                  "message": "You do not have permission to access this resource."
+                }
+              }
+            },
+            "404": {
+              "description": "Not Found Error",
+              "schema": {
+                "$ref": "#/definitions/NotFoundError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "NotFoundError",
+                  "message": "The product with ID cafe1e28-0edf-4cb2-a97c-dc58145c7d61 was not found."
+                }
+              }
+            },
+            "500": {
+              "description": "Server error",
+              "schema": {
+                "$ref": "#/definitions/InternalServerError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "InternalServerError",
+                  "message": "An unexpected error occurred while processing the request."
+                }
+              }
+            }
+          }          
+        },
+          "get": {
+            "tags": ["Orders"],
+            "summary": "Retrieve a list of orders or a specific order",
+            "description": "Fetches a list of all orders or a specific order by ID. Supports filtering, sorting, pagination, and limiting the number of results returned.",
+            "produces": ["application/json"],
+            "parameters": [
+              {
+                "name": "id",
+                "in": "path",
+                "required": false,
+                "description": "The UUID of the order to retrieve.",
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[4][0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+              },
+              {
+                "name": "filter",
+                "in": "query",
+                "required": false,
+                "description": "Filters the results based on field values. Use ';' to separate multiple filters and ',' to separate values for the same field. Supported fields: ids, createTime, createdBy, status",
+                "example": "createdBy=cafe1e28-0edf-4cb2-a97c-dc58145c7d61,bc9a17d1-d76e-4285-b142-1c3b841e69af;status=Processed",
+                "type": "string"
+              },
+              {
+                "name": "sort",
+                "in": "query",
+                "required": false,
+                "description": "Sorts the results based on a field and order. Use '_asc' or '_desc' to specify the order.",
+                "example":"sort=status_asc",
+                "type": "string"
+              },
+              {
+                "name": "page",
+                "in": "query",
+                "required": false,
+                "description": "Specifies the page of results to retrieve, must be at least 1 if specified.",
+                "example":"page=2",
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "name": "limit",
+                "in": "query",
+                "required": false,
+                "description": "Limit the number of products returned, must be at least 1 if specified.",
+                "type": "integer",
+                "example":"limit=10",
+                "minimum": 1
+              },
+              {
+                "name": "Authorization",
+                "in": "header",
+                "required": true,
+                "type": "string",
+                "description": "Bearer token for authentication."
+              },
+              {
+                "name": "Service",
+                "in": "header",
+                "required": true,
+                "type": "string",
+                "description": "Name of the service making the API call."
+              },
+              {
+                "name": "Transaction-ID",
+                "in": "header",
+                "required": true,
+                "type": "string",
+                "description": "Unique identifier for the transaction."
+              },
+              {
+                "name": "Content-Type",
+                "in": "header",
+                "required": true,
+                "default": "application/json",
+                "type": "string",
+                "description": "Content type of the request, must be application/json."
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "A list of orders or a specific order based on query parameters.",
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "links"],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/definitions/OrderData"
+                    },
+                    "links": {
+                      "$ref": "#/definitions/LinksObject"
+                    }
+                  }
+                }
+              }, 
+              "400": {
+                "description": "Bad Request Error",
+                "schema": {
+                  "$ref": "#/definitions/BadRequestError"
+                },
+                "examples": {
+                  "application/json": {
+                    "error": "BadRequestError",
+                    "message": "Invalid filter parameter."
+                  }
+                }
+              },
+              "401": {
+                "description": "Unauthorized Error",
+                "schema": {
+                  "$ref": "#/definitions/UnauthorizedError"
+                },
+                "examples": {
+                  "application/json": {
+                    "error": "UnauthorizedError",
+                    "message": "JWT token is missing or expired."
+                  }
+                }
+              },
+              "403": {
+                "description": "Forbidden Error",
+                "schema": {
+                  "$ref": "#/definitions/ForbiddenError"
+                },
+                "examples": {
+                  "application/json": {
+                    "error": "ForbiddenError",
+                    "message": "You do not have permission to access this resource."
+                  }
+                }
+              },
+              "404": {
+                "description": "Not Found Error",
+                "schema": {
+                  "$ref": "#/definitions/NotFoundError"
+                },
+                "examples": {
+                  "application/json": {
+                    "error": "NotFoundError",
+                    "message": "The requested order was not found."
+                  }
+                }
+              },
+              "500": {
+                "description": "Internal Server Error",
+                "schema": {
+                  "$ref": "#/definitions/InternalServerError"
+                },
+                "examples": {
+                  "application/json": {
+                    "error": "InternalServerError",
+                    "message": "An unexpected error occurred on the server."
+                  }
+                }
+              }
+            },          
+            "security": [
+              {
+                "bearerAuth": []
+              }
+            ]
+          }
+      },
+      "/items": {
+        "get": {
+          "tags": ["Items"],
+          "summary": "Retrieve a list of items or a specific item",
+          "description": "Fetches a list of all items or a specific items by ID. Supports filtering, sorting, pagination, and limiting the number of results returned.",
+          "produces": ["application/json"],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": false,
+              "description": "The UUID of the item to retrieve.",
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[4][0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "required": false,
+              "description": "Filters the results based on field values. Use ';' to separate multiple filters and ',' to separate values for the same field. Supported fields: ids, quantity",
+              "example": "quantity>100",
+              "type": "string"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "required": false,
+              "description": "Sorts the results based on a field and order. Use '_asc' or '_desc' to specify the order.",
+              "example":"sort=quantity_asc",
+              "type": "string"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "required": false,
+              "description": "Specifies the page of results to retrieve, must be at least 1 if specified.",
+              "example":"page=2",
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "required": false,
+              "description": "Limit the number of items returned, must be at least 1 if specified.",
+              "type": "integer",
+              "example":"limit=10",
+              "minimum": 1
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Bearer token for authentication."
+            },
+            {
+              "name": "Service",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Name of the service making the API call."
+            },
+            {
+              "name": "Transaction-ID",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Unique identifier for the transaction."
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "required": true,
+              "default": "application/json",
+              "type": "string",
+              "description": "Content type of the request, must be application/json."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A list of items or a specific items based on query parameters.",
+              "schema": {
+                "type": "object",
+                "required": ["data", "links"],
+                "properties": {
+                  "data": {
+                    "$ref": "#/definitions/ItemData"
+                  },
+                  "links": {
+                    "$ref": "#/definitions/LinksObject"
+                  }
+                }
+              }
+            }, 
+            "400": {
+              "description": "Bad Request Error",
+              "schema": {
+                "$ref": "#/definitions/BadRequestError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "BadRequestError",
+                  "message": "Invalid filter parameter."
+                }
+              }
+            },
+            "401": {
+              "description": "Unauthorized Error",
+              "schema": {
+                "$ref": "#/definitions/UnauthorizedError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "UnauthorizedError",
+                  "message": "JWT token is missing or expired."
+                }
+              }
+            },
+            "403": {
+              "description": "Forbidden Error",
+              "schema": {
+                "$ref": "#/definitions/ForbiddenError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "ForbiddenError",
+                  "message": "You do not have permission to access this resource."
+                }
+              }
+            },
+            "404": {
+              "description": "Not Found Error",
+              "schema": {
+                "$ref": "#/definitions/NotFoundError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "NotFoundError",
+                  "message": "The requested order was not found."
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "schema": {
+                "$ref": "#/definitions/InternalServerError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "InternalServerError",
+                  "message": "An unexpected error occurred on the server."
+                }
+              }
+            }
+          },          
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ]
+        }
+      },
+      "/customers": {
+        "get": {"tags": ["Customers"],
+        "summary": "Retrieve a list of customers or a specific customer",
+        "description": "Fetches a list of all customers or a specific customers by ID. Supports filtering, sorting, pagination, and limiting the number of results returned.",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": false,
+            "description": "The UUID of the customer to retrieve.",
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[4][0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "description": "Filters the results based on field values. Use ';' to separate multiple filters and ',' to separate values for the same field. Supported fields: ids, name, country, email",
+            "example": "name>John",
+            "type": "string"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Sorts the results based on a field and order. Use '_asc' or '_desc' to specify the order.",
+            "example":"sort=country_asc",
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Specifies the page of results to retrieve, must be at least 1 if specified.",
+            "example":"page=2",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Limit the number of items returned, must be at least 1 if specified.",
+            "type": "integer",
+            "example":"limit=10",
+            "minimum": 1
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": "Bearer token for authentication."
+          },
+          {
+            "name": "Service",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": "Name of the service making the API call."
+          },
+          {
+            "name": "Transaction-ID",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": "Unique identifier for the transaction."
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "default": "application/json",
+            "type": "string",
+            "description": "Content type of the request, must be application/json."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of customers or a specific customer based on query parameters.",
+            "schema": {
+              "type": "object",
+              "required": ["data", "links"],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/CustomerData"
+                },
+                "links": {
+                  "$ref": "#/definitions/LinksObject"
+                }
+              }
+            }
+          }, 
+          "400": {
+            "description": "Bad Request Error",
+            "schema": {
+              "$ref": "#/definitions/BadRequestError"
+            },
+            "examples": {
+              "application/json": {
+                "error": "BadRequestError",
+                "message": "Invalid filter parameter."
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized Error",
+            "schema": {
+              "$ref": "#/definitions/UnauthorizedError"
+            },
+            "examples": {
+              "application/json": {
+                "error": "UnauthorizedError",
+                "message": "JWT token is missing or expired."
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden Error",
+            "schema": {
+              "$ref": "#/definitions/ForbiddenError"
+            },
+            "examples": {
+              "application/json": {
+                "error": "ForbiddenError",
+                "message": "You do not have permission to access this resource."
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found Error",
+            "schema": {
+              "$ref": "#/definitions/NotFoundError"
+            },
+            "examples": {
+              "application/json": {
+                "error": "NotFoundError",
+                "message": "The requested order was not found."
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/InternalServerError"
+            },
+            "examples": {
+              "application/json": {
+                "error": "InternalServerError",
+                "message": "An unexpected error occurred on the server."
+              }
+            }
+          }
+        },          
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]}
+      },
+      "/products": {
+        "get": {
+          "tags": ["Products"],
+          "summary": "Retrieve a list of products or a specific product",
+          "description": "Fetches a list of all products or a specific product by ID. Supports filtering, sorting, pagination, and limiting the number of results returned.",
+          "produces": ["application/json"],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": false,
+              "description": "The UUID of the product to retrieve.",
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[4][0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "required": false,
+              "description": "Filters the results based on field values. Use ';' to separate multiple filters and ',' to separate values for the same field. Supported fields: ids, name, description, price",
+              "example": "name=Pro,Plus;price>1000,<=2000",
+              "type": "string"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "required": false,
+              "description": "Sorts the results based on a field and order. Use '_asc' or '_desc' to specify the order.",
+              "example":"sort=name_asc",
+              "type": "string"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "required": false,
+              "description": "Specifies the page of results to retrieve, must be at least 1 if specified.",
+              "example":"page=2",
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "required": false,
+              "description": "Limit the number of products returned, must be at least 1 if specified.",
+              "type": "integer",
+              "example":"limit=10",
+              "minimum": 1
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Bearer token for authentication."
+            },
+            {
+              "name": "Service",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Name of the service making the API call."
+            },
+            {
+              "name": "Transaction-ID",
+              "in": "header",
+              "required": true,
+              "type": "string",
+              "description": "Unique identifier for the transaction."
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "required": true,
+              "default": "application/json",
+              "type": "string",
+              "description": "Content type of the request, must be application/json."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A list of products or a specific product based on query parameters.",
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/ApiResponse"
+                }
+              }
+            },
+            "400": {
+              "description": "Bad Request Error",
+              "schema": {
+                "$ref": "#/definitions/BadRequestError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "BadRequestError",
+                  "message": "Invalid filter parameter."
+                }
+              }
+            },
+            "401": {
+              "description": "Unauthorized Error",
+              "schema": {
+                "$ref": "#/definitions/UnauthorizedError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "UnauthorizedError",
+                  "message": "JWT token is missing or expired."
+                }
+              }
+            },
+            "403": {
+              "description": "Forbidden Error",
+              "schema": {
+                "$ref": "#/definitions/ForbiddenError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "ForbiddenError",
+                  "message": "You do not have permission to access this resource."
+                }
+              }
+            },
+            "404": {
+              "description": "Not Found Error",
+              "schema": {
+                "$ref": "#/definitions/NotFoundError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "NotFoundError",
+                  "message": "The requested product was not found."
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "schema": {
+                "$ref": "#/definitions/InternalServerError"
+              },
+              "examples": {
+                "application/json": {
+                  "error": "InternalServerError",
+                  "message": "An unexpected error occurred on the server."
+                }
+              }
+            }
+          },          
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ]
+        }
+      }
+    }, 
+    "definitions": {
+      "ApiResponse": {
+        "type": "object",
+        "required": ["data", "links"],
+        "properties": {
+          "data": {
+            "oneOf": [
+              { "$ref": "#/definitions/ProductData" },
+              { "$ref": "#/definitions/OrderData" },
+              { "$ref": "#/definitions/CustomerData" }
+            ]
+          },
+          "links": {
+            "$ref": "#/definitions/LinksObject"
+          }
+        }
+      },
+      "ProductData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "d290f1ee-6c54-4b01-90e6-d701748f0851"
+          },
+          "name": {
+            "type": "string",
+            "example": "Widget Adapter"
+          },
+          "description": {
+            "type": "string",
+            "example": "A product that helps in widgets"
+          },
+          "price": {
+            "type": "integer",
+            "example": 550
+          }
+        }
+      },
+      "OrderData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "d107fd9e-dc94-49aa-87d1-870eef32b357"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-04-11T02:52:57.435667"
+          },
+          "createdBy": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "302a8334-ce5d-4f8c-b74d-c82bfe8eebe4"
+                  }
+                }
+              },
+              "self": {
+                "type": "string",
+                "example": "/api/v1/customers/302a8334-ce5d-4f8c-b74d-c82bfe8eebe4"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["Pending", "Processed", "Rejected"],
+            "example": "Pending"
+          },
+          "itemsIds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "example": "92094214-7fbe-4da1-97c8-84a0e61db3c3"
+                    }
+                  }
+                },
+                "self": {
+                  "type": "string",
+                  "example": "/api/v1/items/92094214-7fbe-4da1-97c8-84a0e61db3c3"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CustomerData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "302a8334-ce5d-4f8c-b74d-c82bfe8eebe4"
+          },
+          "name": {
+            "type": "string",
+            "example": "Alice Johnson"
+          },
+          "country": {
+            "type": "string",
+            "example": "USA"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          }
+        },
+        "links": {
+          "self": {
+            "type": "string",
+            "example": "/api/v1/customers/302a8334-ce5d-4f8c-b74d-c82bfe8eebe4"
+          },
+          "update": {
+            "type": "string",
+            "example": "/api/v1/customers/302a8334-ce5d-4f8c-b74d-c82bfe8eebe4"
+          },
+          "delete": {
+            "type": "string",
+            "example": "/api/v1/customers/302a8334-ce5d-4f8c-b74d-c82bfe8eebe4"
+          }
+        }
+      },
+      "ItemData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "92094214-7fbe-4da1-97c8-84a0e61db3c3"
+          },
+          "quantity": {
+            "type": "integer",
+            "example": 5
+          },
+          "productId": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "cafe1e28-0edf-4cb2-a97c-dc58145c7d61"
+                  }
+                }
+              },
+              "self": {
+                "type": "string",
+                "example": "/api/v1/products/cafe1e28-0edf-4cb2-a97c-dc58145c7d61"
+              }
+            }
+          },
+          "orderId": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "d107fd9e-dc94-49aa-87d1-870eef32b357"
+                  }
+                }
+              },
+              "self": {
+                "type": "string",
+                "example": "/api/v1/orders/d107fd9e-dc94-49aa-87d1-870eef32b357"
+              }
+            }
+          }
+        },
+        "links": {
+          "self": {
+            "type": "string",
+            "example": "/api/v1/items/92094214-7fbe-4da1-97c8-84a0e61db3c3"
+          },
+          "update": {
+            "type": "string",
+            "example": "/api/v1/items/92094214-7fbe-4da1-97c8-84a0e61db3c3"
+          },
+          "delete": {
+            "type": "string",
+            "example": "/api/v1/items/92094214-7fbe-4da1-97c8-84a0e61db3c3"
+          }
+        }
+      },
+      "LinksObject": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "string",
+            "example": "/api/v1/{resource}/{id}"
+          },
+          "update": {
+            "type": "object",
+            "properties": {
+              "href": {
+                "type": "string",
+                "example": "/api/v1/{resource}/{id}"
+              },
+              "method": {
+                "type": "string",
+                "example": "PATCH"
+              }
+            }
+          },
+          "delete": {
+            "type": "string",
+            "example": "/api/v1/{resource}/{id}"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error", "message"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "NotFoundError"
+          },
+          "message": {
+            "type": "string",
+            "example": "The requested resource was not found."
+          }
+        }
+      },
+      "BadRequestError": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/ErrorResponse"
+          },
+          {
+            "properties": {
+              "error": {
+                "example": "BadRequestError"
+              },
+              "message": {
+                "example": "Bad Request - Parameters did not validate."
+              }
+            }
+          }
+        ]
+      },
+      "ConflictError": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/ErrorResponse"
+          },
+          {
+            "properties": {
+              "error": {
+                "example": "ConflictError"
+              },
+              "message": {
+                "example": "Conflict - Resource already exists."
+              }
+            }
+          }
+        ]
+      },
+      "ForbiddenError": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/ErrorResponse"
+          },
+          {
+            "properties": {
+              "error": {
+                "example": "ForbiddenError"
+              },
+              "message": {
+                "example": "Forbidden - You do not have permission to access this resource."
+              }
+            }
+          }
+        ]
+      },
+      "InternalServerError": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/ErrorResponse"
+          },
+          {
+            "properties": {
+              "error": {
+                "example": "InternalServerError"
+              },
+              "message": {
+                "example": "Internal Server Error - Unexpected error occurred."
+              }
+            }
+          }
+        ]
+      },
+      "NotFoundError": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/ErrorResponse"
+          },
+          {
+            "properties": {
+              "error": {
+                "example": "NotFoundError"
+              },
+              "message": {
+                "example": "Not Found - The requested resource was not found."
+              }
+            }
+          }
+        ]
+      },
+      "UnauthorizedError": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/ErrorResponse"
+          },
+          {
+            "properties": {
+              "error": {
+                "example": "UnauthorizedError"
+              },
+              "message": {
+                "example": "Unauthorized - Missing or invalid authentication token."
+              }
+            }
+          }
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "authToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMDJhODMzNC1jZTVkLTRmOGMtYjc0ZC1jODJiZmU4ZWViZTQiLCJpYXQiOjE3MTM3NTM0OTYsImV4cCI6MTcxMzc1NzA5Nn0.esecKLInd_2Te2btavI2SYJ-oUotGqV9k4Y9OeWTJ8Q"
+              }
+            }
+          }
+        }
+      }            
+    }
+       
+  }
+  

@@ -2,7 +2,6 @@
   "compilerOptions": {
     "rootDir": ".",
     "sourceMap": true,
-    "declaration": false,
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -13,8 +12,13 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {},
-    "esModuleInterop": true
+    "paths": {
+      "src/*": ["src/*"]
+    },
+    "esModuleInterop": true,
+    "types": ["jest", "node"],
+    "composite": true,
+    "declaration": true,
   },
   "files": [],
   "include": [],
